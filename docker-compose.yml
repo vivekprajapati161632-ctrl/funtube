@@ -1,0 +1,53 @@
+﻿services:
+  mongo:
+    image: mongo:7
+    container_name: funtube-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: ./backend
+    container_name: funtube-backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://mongo:27017/funtube
+      JWT_SECRET: change-this-in-production
+      JWT_EXPIRES_IN: 7d
+      CLIENT_ORIGIN: http://localhost,http://localhost:5173
+      APP_BASE_URL: http://localhost
+      USE_S3: "false"
+      AWS_REGION: us-east-1
+      AWS_S3_BUCKET: ""
+    volumes:
+      - uploads_data:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: funtube-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  nginx:
+    build: ./nginx
+    container_name: funtube-nginx
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  mongo_data:
+  uploads_data:
+
